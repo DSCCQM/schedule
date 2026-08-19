@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>疾病照護認證時程儀表板</title>
+<style>
+  :root{
+    --navy:#12293f;
+    --navy-2:#1c3a54;
+    --teal:#0f8b8d;
+    --teal-light:#e3f4f3;
+    --paper:#f5f7f6;
+    --card:#ffffff;
+    --ink:#1a2733;
+    --ink-soft:#5b6b76;
+    --line:#dde4e3;
+
+    --c-grey:#8a97a0;
+    --c-grey-bg:#eef1f2;
+    --c-orange:#c9820f;
+    --c-orange-bg:#fdf1dd;
+    --c-red:#c23b3b;
+    --c-red-bg:#fbe7e7;
+    --c-blue:#2563aa;
+    --c-blue-bg:#e2edf9;
+    --c-maroon:#7a1f2b;
+    --c-maroon-bg:#f3dbdd;
+    --c-green:#2f7d5a;
+    --c-green-bg:#e4f1ea;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",-apple-system,BlinkMacSystemFont,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.5;
+  }
+  .topbar{
+    background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 100%);
+    color:#fff;
+    padding:28px clamp(16px,4vw,40px);
+    position:relative;
+    overflow:hidden;
+  }
+  .topbar::after{
+    content:"";
+    position:absolute;
+    right:-60px; top:-60px;
+    width:220px; height:220px;
+    border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, rgba(15,139,141,0.55), transparent 70%);
+  }
+  .topbar h1{
+    margin:0 0 4px 0;
+    font-size:clamp(22px,3vw,28px);
+    font-weight:700;
+    letter-spacing:0.5px;
+    position:relative;
+  }
+  .topbar .sub{
+    font-size:15px;
+    color:#c3d2da;
+    position:relative;
+  }
+  .topbar .today{
+    display:inline-block;
+    margin-top:10px;
+    background:rgba(255,255,255,0.12);
+    border:1px solid rgba(255,255,255,0.25);
+    padding:5px 14px;
+    border-radius:20px;
+    font-size:14.5px;
+    position:relative;
+  }
+  .lock-bar{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:10px;
+    max-width:1200px;
+    margin:14px auto 0;
+    padding:0 clamp(12px,3vw,24px);
+  }
+  .lock-status{
+    font-size:14px;
+    color:var(--ink-soft);
+  }
+  .lock-btn{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background:var(--card);
+    border:1px solid var(--line);
+    color:var(--navy);
+    font-size:14.5px;
+    font-weight:700;
+    padding:7px 14px;
+    border-radius:20px;
+    cursor:pointer;
+    transition:all .15s ease;
+  }
+  .lock-btn:hover{border-color:var(--teal);color:var(--teal);}
+  .lock-btn.unlocked{
+    background:var(--teal);
+    border-color:var(--teal);
+    color:#fff;
+  }
+  input[type=date][disabled]{
+    border-color:transparent;
+    background:transparent;
+    color:var(--ink);
+    -webkit-text-fill-color:var(--ink);
+    opacity:1;
+    padding-left:0;
+    cursor:default;
+  }
+  input[type=date][disabled]::-webkit-calendar-picker-indicator{
+    display:none;
+  }
+  .wrap{
+    max-width:1200px;
+    margin:0 auto;
+    padding:20px clamp(12px,3vw,24px) 60px;
+  }
+
+  /* custom passcode modal (native prompt() is blocked in the sandboxed artifact iframe) */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(18,41,63,0.45);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-box{
+    background:#fff;
+    border-radius:14px;
+    padding:24px 26px;
+    width:min(320px, 90vw);
+    box-shadow:0 10px 30px rgba(18,41,63,0.25);
+  }
+  .modal-box h3{
+    margin:0 0 6px;
+    font-size:17px;
+    color:var(--navy);
+  }
+  .modal-box p{
+    margin:0 0 14px;
+    font-size:14.5px;
+    color:var(--ink-soft);
+  }
+  .modal-box input[type=password]{
+    width:100%;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:9px 10px;
+    font-size:16px;
+    margin-bottom:8px;
+    box-sizing:border-box;
+  }
+  .modal-box input[type=password]:focus{
+    outline:2px solid var(--teal);
+    outline-offset:1px;
+  }
+  .modal-error{
+    font-size:14px;
+    color:var(--c-red);
+    min-height:16px;
+    margin-bottom:6px;
+  }
+  .modal-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+  }
+  .modal-actions button{
+    border:none;
+    border-radius:8px;
+    padding:8px 16px;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .modal-cancel{ background:var(--c-grey-bg); color:var(--ink-soft); }
+  .modal-confirm{ background:var(--teal); color:#fff; }
+
+  /* summary panel */
+  .summary{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px 20px;
+    margin-bottom:24px;
+    box-shadow:0 1px 3px rgba(18,41,63,0.06);
+  }
+  .summary h2{
+    margin:0 0 12px;
+    font-size:17px;
+    color:var(--navy);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .summary h2 .dot{
+    width:8px;height:8px;border-radius:50%;background:var(--c-red);display:inline-block;
+  }
+  .alert-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .alert-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 12px;
+    border-radius:8px;
+    font-size:15px;
+    border-left:4px solid transparent;
+  }
+  .alert-row.urgent{background:var(--c-orange-bg);border-left-color:var(--c-orange);color:#7a5a0e;}
+  .alert-row.overdue{background:var(--c-maroon-bg);border-left-color:var(--c-maroon);color:var(--c-maroon);}
+  .alert-row.reminder{background:var(--c-blue-bg);border-left-color:var(--c-blue);color:var(--c-blue);}
+  .alert-group-label{
+    font-size:13.5px;
+    font-weight:700;
+    color:var(--ink-soft);
+    margin:14px 0 4px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+  }
+  .alert-group-label:first-child{margin-top:0;}
+  .alert-row .tag{
+    font-weight:700;
+    font-size:13px;
+    padding:2px 8px;
+    border-radius:10px;
+    background:rgba(0,0,0,0.08);
+    white-space:nowrap;
+  }
+  .alert-empty{
+    color:var(--ink-soft);
+    font-size:15px;
+    padding:6px 2px;
+  }
+
+  /* legend */
+  .legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px;
+    margin-bottom:20px;
+    font-size:14px;
+    color:var(--ink-soft);
+  }
+  .legend span{display:flex;align-items:center;gap:6px;}
+  .legend i{width:10px;height:10px;border-radius:3px;display:inline-block;}
+
+  /* cards */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(360px,1fr));
+    gap:18px;
+  }
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px 20px 16px;
+    box-shadow:0 1px 3px rgba(18,41,63,0.06);
+    position:relative;
+  }
+  .card-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+    padding-bottom:12px;
+    border-bottom:1px solid var(--line);
+  }
+  .card-head .name{
+    font-size:18px;
+    font-weight:700;
+    color:var(--navy);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .card-head .idx{
+    font-size:13px;
+    font-weight:700;
+    color:#fff;
+    background:var(--teal);
+    border-radius:6px;
+    padding:2px 7px;
+  }
+  .card-head-right{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .name-input{
+    font-size:18px;
+    font-weight:700;
+    color:var(--navy);
+    border:1px solid var(--line);
+    border-radius:7px;
+    padding:3px 8px;
+    font-family:inherit;
+    max-width:180px;
+  }
+  .name-input:focus{
+    outline:2px solid var(--teal);
+    outline-offset:1px;
+  }
+  .del-btn{
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--ink-soft);
+    font-size:13px;
+    border-radius:8px;
+    padding:4px 9px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .del-btn:hover{ border-color:var(--c-red); color:var(--c-red); }
+  .del-btn.confirm{
+    background:var(--c-red-bg);
+    border-color:var(--c-red);
+    color:var(--c-red);
+    font-weight:700;
+  }
+  .mini-btn{
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--ink-soft);
+    font-size:11.5px;
+    font-weight:700;
+    border-radius:16px;
+    padding:3px 10px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .mini-btn:hover:not(:disabled){ border-color:var(--teal); color:var(--teal); }
+  .mini-btn.done{
+    background:var(--c-green-bg);
+    border-color:var(--c-green);
+    color:var(--c-green);
+  }
+  .mini-btn:disabled{ opacity:0.55; cursor:default; }
+  .field{
+    display:grid;
+    grid-template-columns:100px 1fr;
+    gap:8px;
+    align-items:center;
+    padding:6px 0;
+  }
+  .field.range{
+    display:grid;
+    grid-template-columns:1fr 16px 1fr;
+    grid-template-rows:auto auto;
+    column-gap:8px;
+    row-gap:4px;
+    padding:6px 0;
+  }
+  .field.range label{
+    grid-column:1 / -1;
+    grid-row:1;
+  }
+  .field.range input[type=date]:nth-of-type(1){
+    grid-column:1;
+    grid-row:2;
+  }
+  .field.range .sep{
+    grid-column:2;
+    grid-row:2;
+  }
+  .field.range input[type=date]:nth-of-type(2){
+    grid-column:3;
+    grid-row:2;
+  }
+  .field label{
+    font-size:14.5px;
+    color:var(--ink-soft);
+  }
+  .field input[type=date]{
+    width:100%;
+    min-width:0;
+    border:1px solid var(--line);
+    border-radius:7px;
+    padding:5px 7px;
+    font-size:14.5px;
+    font-family:inherit;
+    color:var(--ink);
+    background:#fbfcfc;
+    box-sizing:border-box;
+  }
+  .field input[type=date]:focus{
+    outline:2px solid var(--teal);
+    outline-offset:1px;
+  }
+  .sep{color:var(--ink-soft);text-align:center;font-size:14px;}
+
+  .status-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-top:2px;
+  }
+  .badge{
+    font-size:13px;
+    font-weight:700;
+    padding:3px 9px;
+    border-radius:20px;
+    white-space:nowrap;
+  }
+  .b-grey{background:var(--c-grey-bg);color:var(--c-grey);}
+  .b-orange{background:var(--c-blue-bg);color:var(--c-blue);}
+  .b-red{background:var(--c-orange-bg);color:var(--c-orange);}
+  .b-maroon{background:var(--c-maroon-bg);color:var(--c-maroon);}
+  .b-green{background:var(--c-green-bg);color:var(--c-green);}
+
+  .section-title{
+    font-size:13.5px;
+    color:var(--teal);
+    font-weight:700;
+    letter-spacing:0.5px;
+    margin:14px 0 2px;
+    text-transform:uppercase;
+  }
+  .remark-box{
+    width:100%;
+    min-height:60px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:8px 10px;
+    font-size:14px;
+    font-family:inherit;
+    color:var(--ink);
+    background:#fbfcfc;
+    resize:vertical;
+    box-sizing:border-box;
+  }
+  .remark-box:focus{
+    outline:2px solid var(--teal);
+    outline-offset:1px;
+  }
+  .remark-box:disabled{
+    background:transparent;
+    border-color:transparent;
+    color:var(--ink);
+    opacity:1;
+    resize:none;
+    padding-left:0;
+  }
+  .note-row{
+    margin-top:4px;
+    font-size:13.5px;
+    color:var(--ink-soft);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .flag{
+    font-size:13px;
+    background:#eef1f2;
+    color:var(--ink-soft);
+    padding:1px 7px;
+    border-radius:8px;
+  }
+  .toast{
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--navy);
+    color:#fff;
+    padding:9px 18px;
+    border-radius:24px;
+    font-size:15px;
+    opacity:0;
+    transition:all .25s ease;
+    pointer-events:none;
+    z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .footer-note{
+    text-align:center;
+    color:var(--ink-soft);
+    font-size:14px;
+    margin-top:30px;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>疾病照護品質認證　時程儀表板</h1>
+  <div class="sub" id="subLabel">疾病別認證追蹤・申請認證期限與改善追蹤自動提醒</div>
+  <div class="today" id="todayLabel">今天：—</div>
+</div>
+
+<div class="lock-bar">
+  <span class="lock-status" id="lockStatus">目前為檢視模式，所有人皆無法編輯</span>
+  <button class="lock-btn" id="addBtn" onclick="addNewItem()">➕ 新增疾病別</button>
+  <button class="lock-btn" id="exportBtn" onclick="exportICS()">📅 匯出日曆提醒</button>
+  <button class="lock-btn" id="lockBtn" onclick="toggleEditMode()">🔒 解鎖編輯</button>
+</div>
+
+<div class="modal-overlay" id="passModal">
+  <div class="modal-box">
+    <h3>輸入編輯密碼</h3>
+    <p>請輸入密碼以解鎖修改權限</p>
+    <input type="password" id="passInput" placeholder="密碼" autocomplete="off" onkeydown="if(event.key==='Enter') submitPasscode();">
+    <div class="modal-error" id="passError"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closePassModal()">取消</button>
+      <button class="modal-confirm" onclick="submitPasscode()">確認</button>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="summary">
+    <h2><span class="dot"></span>時程警示（提醒中／緊急／逾期）</h2>
+    <div class="alert-list" id="alertList"></div>
+  </div>
+
+  <div class="legend">
+    <span><i style="background:var(--c-grey)"></i>尚未進入提醒期</span>
+    <span><i style="background:var(--c-blue)"></i>提醒中（到期前1個月內）</span>
+    <span><i style="background:var(--c-orange)"></i>緊急（到期前2週內）</span>
+    <span><i style="background:var(--c-maroon)"></i>已逾期，請確認辦理狀態</span>
+    <span><i style="background:var(--c-green)"></i>已標記完成</span>
+  </div>
+
+  <div class="grid" id="cardGrid"></div>
+
+  <div class="footer-note">資料每次修改會自動儲存；重新整理頁面或由其他裝置開啟皆可看到最新內容。</div>
+</div>
+
+<div class="toast" id="toast">已儲存</div>
+
+<script>
+const STORAGE_KEY = 'cert-dashboard-v1';
+const MS_DAY = 86400000;
+// 編輯密碼：只有知道此密碼的人（例如您自己）才能解鎖編輯。
+// 若要更改密碼，請直接修改下面這行的文字。
+const EDITOR_PASSCODE = 'cert2026';
+
+// ============================================================
+// 後端資料庫設定（Google Apps Script + Google 試算表）
+// ============================================================
+// APPS_SCRIPT_URL：已經幫您填好，是您部署後拿到的網址
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyA4sEX9bFLsbPuYd9a9ozge73xLNYt5XqVwpw_8NTwdJyP8YklggF2uD5KCmZrDP_Z/exec';
+// API_TOKEN：請填入您在 Google Apps Script「指令碼屬性 Script Properties」
+// 裡設定的 SECRET_TOKEN 值（就是您剛剛自己設定的那組密碼）
+const API_TOKEN = 'cert2026dashboard';
+
+async function backendGet(){
+  const res = await fetch(`${APPS_SCRIPT_URL}?token=${encodeURIComponent(API_TOKEN)}`);
+  const data = await res.json();
+  if(data.error){ throw new Error(data.error); }
+  return data.value || '';
+}
+
+async function backendSet(valueStr){
+  const url = `${APPS_SCRIPT_URL}?token=${encodeURIComponent(API_TOKEN)}&action=set&value=${encodeURIComponent(valueStr)}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(data.error){ throw new Error(data.error); }
+  return data;
+}
+let editMode = false;
+let pendingDelete = null; // 記錄目前正在等待「再點一次確認刪除」的項目索引
+
+const defaultItems = [
+  {name:"腎臟病", established:"2006-10-30", applyStart:"2025-07-01", applyEnd:"2025-09-30",
+    visit:"2026-07-08", certStart:"2023-07-01", certEnd:"2026-06-30",
+    t3:"", t15:"", t27:"", note:""},
+  {name:"腦中風", established:"", applyStart:"2025-07-01", applyEnd:"2025-09-30",
+    visit:"", certStart:"2023-07-01", certEnd:"2026-06-30",
+    t3:"", t15:"", t27:"", note:"申請認證（暫緩）"},
+  {name:"TBI", established:"2019-07-22", applyStart:"2025-07-01", applyEnd:"2025-09-30",
+    visit:"2026-05-26", certStart:"2023-07-01", certEnd:"2026-06-30",
+    t3:"", t15:"", t27:"", note:""},
+  {name:"COPD", established:"", applyStart:"2026-01-01", applyEnd:"2026-03-31",
+    visit:"2026-12-01", certStart:"2024-04-01", certEnd:"2027-03-31",
+    t3:"", t15:"", t27:"", note:""},
+  {name:"關節置換", established:"", applyStart:"2026-01-01", applyEnd:"2026-03-31",
+    visit:"2027-01-01", certStart:"2024-04-01", certEnd:"2027-03-31",
+    t3:"", t15:"", t27:"", note:""},
+  {name:"AMI", established:"", applyStart:"2026-07-01", applyEnd:"2026-09-30",
+    visit:"2024-03-13", certStart:"2024-07-01", certEnd:"2027-06-30",
+    t3:"", t15:"", t27:"2026-09-30", note:""},
+  {name:"糖尿病", established:"2021-12-01", applyStart:"2028-01-01", applyEnd:"2028-03-31",
+    visit:"2025-12-19", certStart:"2026-04-01", certEnd:"2029-03-31",
+    t3:"2026-06-30", t15:"2027-06-30", t27:"2028-06-30", note:""},
+  {name:"乳癌", established:"", applyStart:"2026-01-01", applyEnd:"2026-03-31",
+    visit:"2026-10-01", certStart:"2024-04-01", certEnd:"2027-03-31",
+    t3:"", t15:"", t27:"", note:""},
+  {name:"DDH", established:"2024-09-04", applyStart:"2028-01-01", applyEnd:"2028-03-31",
+    visit:"2025-12-15", certStart:"2026-04-01", certEnd:"2029-03-31",
+    t3:"2026-06-30", t15:"2027-06-30", t27:"2028-06-30", note:""},
+  {name:"肺癌", established:"2026-01-22", applyStart:"2026-07-01", applyEnd:"2026-09-30",
+    visit:"", certStart:"2028-10-01", certEnd:"2031-09-30",
+    t3:"", t15:"", t27:"", note:""},
+  {name:"結直腸癌", established:"2026-02-25", applyStart:"2026-07-01", applyEnd:"2026-09-30",
+    visit:"", certStart:"2028-10-01", certEnd:"2031-09-30",
+    t3:"", t15:"", t27:"", note:""},
+];
+
+let items = null;
+const today = new Date();
+today.setHours(0,0,0,0);
+
+function fmtToday(){
+  const y=today.getFullYear(), m=String(today.getMonth()+1).padStart(2,'0'), d=String(today.getDate()).padStart(2,'0');
+  return `${y}.${m}.${d}`;
+}
+document.getElementById('todayLabel').textContent = '今天：' + fmtToday();
+
+function parseDate(str){
+  if(!str) return null;
+  const d = new Date(str + 'T00:00:00');
+  if(isNaN(d.getTime())) return null;
+  return d;
+}
+function daysUntil(str){
+  const d = parseDate(str);
+  if(!d) return null;
+  return Math.round((d - today)/MS_DAY);
+}
+function fmtDisplay(str){
+  if(!str) return '（空白）';
+  const [y,m,d] = str.split('-');
+  return `${y}.${m}.${d}`;
+}
+
+// 往前推一個月（處理月底天數不同的情況，例如 3/31 往前一個月會落在 2 月最後一天）
+function subtractOneMonth(dateStr){
+  const d = parseDate(dateStr);
+  if(!d) return '';
+  const day = d.getDate();
+  const target = new Date(d.getFullYear(), d.getMonth()-1, 1);
+  const daysInTargetMonth = new Date(target.getFullYear(), target.getMonth()+1, 0).getDate();
+  target.setDate(Math.min(day, daysInTargetMonth));
+  return `${target.getFullYear()}-${pad(target.getMonth()+1)}-${pad(target.getDate())}`;
+}
+
+// 找出「前一週的星期一」：先找出當週星期一，再往前推 7 天
+function mondayOfPrevWeek(dateStr){
+  const d = parseDate(dateStr);
+  if(!d) return '';
+  const dow = d.getDay(); // 0=週日, 1=週一, ..., 6=週六
+  const diffToThisMonday = (dow === 0) ? 6 : dow - 1;
+  const thisMonday = new Date(d);
+  thisMonday.setDate(d.getDate() - diffToThisMonday);
+  thisMonday.setDate(thisMonday.getDate() - 7);
+  return `${thisMonday.getFullYear()}-${pad(thisMonday.getMonth()+1)}-${pad(thisMonday.getDate())}`;
+}
+
+// 申請認證時間：統一以「截止前一個月（30天）」作為提醒門檻，
+// 若已按下「申請完成」則直接視為完成，不再提醒
+// 共用的提醒燈號邏輯：截止前1個月進入提醒（橘），前2週進入緊急（紅），
+// 逾期未處理（暗紅），已標記完成則直接視為完成（綠）
+function reminderStatus(dateStr, done){
+  if(done) return {level:'green', label:'已完成'};
+  if(!dateStr) return {level:'grey', label:'未設定'};
+  const remain = daysUntil(dateStr);
+  if(remain === null) return {level:'grey', label:'未設定'};
+  if(remain < 0) return {level:'maroon', label:`已逾期 ${Math.abs(remain)} 天，請確認`};
+  if(remain <= 14) return {level:'red', label:`緊急・剩 ${remain} 天`};
+  if(remain <= 30) return {level:'orange', label:`提醒中・剩 ${remain} 天`};
+  return {level:'grey', label:`尚未提醒・剩 ${remain} 天`};
+}
+
+// 申請認證時間：以截止日（applyEnd）為準
+function applyStatus(startStr, endStr, done){
+  if(!startStr || !endStr) return {level:'grey', label:'未設定'};
+  return reminderStatus(endStr, done);
+}
+
+// 3/15/27個月改善追蹤
+function trackStatus(dateStr){
+  return reminderStatus(dateStr, false);
+}
+
+// 「所有資料繳交」「簡報繳交」共用：統一以到期前一個月（30天）作為提醒門檻，
+// 若已按下「標記已繳交」則直接視為完成，不再提醒
+function submitStatus(dateStr, done){
+  return reminderStatus(dateStr, done);
+}
+
+function badgeClass(level){
+  return {grey:'b-grey', orange:'b-orange', red:'b-red', maroon:'b-maroon', green:'b-green'}[level] || 'b-grey';
+}
+
+function save(){
+  backendSet(JSON.stringify(items)).then(()=>{
+    showToast('已儲存');
+  }).catch(()=>{
+    showToast('儲存失敗，請檢查網路或密碼設定');
+  });
+}
+
+let toastTimer=null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 1600);
+}
+
+function pad(n){ return String(n).padStart(2,'0'); }
+function toICSDate(str){ // 'YYYY-MM-DD' -> 'YYYYMMDD'
+  return str.replace(/-/g,'');
+}
+function addDaysToDateStr(str, days){
+  const d = parseDate(str);
+  d.setDate(d.getDate()+days);
+  return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+}
+function icsEscape(str){
+  return String(str).replace(/([,;])/g,'\\$1');
+}
+
+function buildVEvent(uid, dateStr, summary, description, alarms){
+  const dtStart = toICSDate(dateStr);
+  const dtEnd = addDaysToDateStr(dateStr, 1); // 全天事件，結束日為隔天
+  const now = new Date();
+  const dtStamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}Z`;
+  let ev = [
+    'BEGIN:VEVENT',
+    `UID:${uid}@cert-dashboard`,
+    `DTSTAMP:${dtStamp}`,
+    `DTSTART;VALUE=DATE:${dtStart}`,
+    `DTEND;VALUE=DATE:${dtEnd}`,
+    `SUMMARY:${icsEscape(summary)}`,
+    `DESCRIPTION:${icsEscape(description)}`,
+  ];
+  alarms.forEach(days=>{
+    ev.push('BEGIN:VALARM');
+    ev.push(`TRIGGER:-P${days}D`);
+    ev.push('ACTION:DISPLAY');
+    ev.push(`DESCRIPTION:${icsEscape(summary)}`);
+    ev.push('END:VALARM');
+  });
+  ev.push('END:VEVENT');
+  return ev.join('\r\n');
+}
+
+function exportICS(){
+  const events = [];
+  items.forEach((it, idx)=>{
+    // 申請認證期間開始：當天提醒（開始受理）
+    if(it.applyStart && !it.applyDone){
+      events.push(buildVEvent(
+        `apply-start-${idx}`,
+        it.applyStart,
+        `【${it.name}】申請認證期間開始`,
+        `${it.name} 申請認證期間自今日開始，至 ${fmtDisplay(it.applyEnd)} 截止。`,
+        [0]
+      ));
+    }
+    // 申請認證截止：統一提前1個月提醒（已標記「申請完成」的不匯出）
+    if(it.applyEnd && !it.applyDone){
+      events.push(buildVEvent(
+        `apply-end-${idx}`,
+        it.applyEnd,
+        `【${it.name}】申請認證截止日`,
+        `${it.name} 申請認證將於今日截止，請確認送件狀態。`,
+        [30, 14, 0]
+      ));
+    }
+    // 改善追蹤：統一提前1個月提醒
+    [['3個月改善追蹤', it.t3], ['15個月改善追蹤', it.t15], ['27個月改善追蹤', it.t27]].forEach(([label, val], j)=>{
+      if(!val) return;
+      events.push(buildVEvent(
+        `track-${idx}-${j}`,
+        val,
+        `【${it.name}】${label}到期`,
+        `${it.name} ${label}將於今日到期，請確認辦理狀態。`,
+        [30, 14, 0]
+      ));
+    });
+    // 所有資料繳交／簡報繳交：統一提前1個月提醒（已標記完成的不匯出）
+    [['所有資料繳交', it.docSubmit, it.docSubmitDone, 'doc'], ['簡報繳交', it.presentSubmit, it.presentSubmitDone, 'present']].forEach(([label, val, done, key])=>{
+      if(!val || done) return;
+      events.push(buildVEvent(
+        `${key}-${idx}`,
+        val,
+        `【${it.name}】${label}`,
+        `${it.name} ${label}將於今日到期。`,
+        [30, 14, 0]
+      ));
+    });
+  });
+
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//cert-dashboard//zh-TW//',
+    'CALSCALE:GREGORIAN',
+    ...events,
+    'END:VCALENDAR'
+  ].join('\r\n');
+
+  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '認證提醒行事曆.ics';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('已下載日曆檔，請匯入 Google/Outlook/Apple 行事曆');
+}
+
+function updateField(idx, field, value){
+  if(!editMode){ return; } // 檢視模式下不允許修改
+  items[idx][field] = value;
+  if(field === 'visit'){
+    // 實地訪視日期一有變動，就重新計算「所有資料繳交」「簡報繳交」的預設日期，
+    // 並重置這兩項的完成標記（因為截止日已經變了，先前的完成狀態不一定還適用）
+    // 注意：這會覆蓋掉這兩個欄位先前手動填的值，若要保留手動調整，請不要再更動實地訪視日期
+    if(value){
+      items[idx].docSubmit = subtractOneMonth(value);
+      items[idx].presentSubmit = mondayOfPrevWeek(value);
+    } else {
+      items[idx].docSubmit = '';
+      items[idx].presentSubmit = '';
+    }
+    items[idx].docSubmitDone = false;
+    items[idx].presentSubmitDone = false;
+  }
+  save();
+  renderAll();
+}
+
+function addNewItem(){
+  if(!editMode){
+    showToast('請先解鎖編輯，才能新增疾病別');
+    return;
+  }
+  items.push({
+    name: '新疾病別',
+    established: '', applyStart: '', applyEnd: '', applyDone: false,
+    docSubmit: '', docSubmitDone: false,
+    presentSubmit: '', presentSubmitDone: false,
+    visit: '',
+    certStart: '', certEnd: '',
+    t3: '', t15: '', t27: '', note: '', remark: ''
+  });
+  save();
+  renderAll();
+  showToast('已新增，請填入名稱與日期');
+  // 捲動到新卡片，方便直接編輯
+  setTimeout(()=>{
+    const cards = document.querySelectorAll('.card');
+    const last = cards[cards.length - 1];
+    if(last){ last.scrollIntoView({behavior:'smooth', block:'center'}); }
+  }, 50);
+}
+
+function deleteItem(idx){
+  if(!editMode) return;
+  if(pendingDelete === idx){
+    items.splice(idx, 1);
+    pendingDelete = null;
+    save();
+    renderAll();
+    showToast('已刪除');
+  } else {
+    pendingDelete = idx;
+    renderAll();
+    setTimeout(()=>{
+      if(pendingDelete === idx){
+        pendingDelete = null;
+        renderAll();
+      }
+    }, 3000);
+  }
+}
+
+function toggleEditMode(){
+  if(editMode){
+    editMode = false;
+    renderAll();
+    updateLockUI();
+    showToast('已鎖定，切換為檢視模式');
+    return;
+  }
+  openPassModal();
+}
+
+function openPassModal(){
+  const modal = document.getElementById('passModal');
+  const input = document.getElementById('passInput');
+  const error = document.getElementById('passError');
+  error.textContent = '';
+  input.value = '';
+  modal.classList.add('show');
+  setTimeout(()=>input.focus(), 50);
+}
+
+function closePassModal(){
+  document.getElementById('passModal').classList.remove('show');
+}
+
+function submitPasscode(){
+  const input = document.getElementById('passInput');
+  const error = document.getElementById('passError');
+  if(input.value === EDITOR_PASSCODE){
+    editMode = true;
+    closePassModal();
+    renderAll();
+    updateLockUI();
+    showToast('已解鎖，目前為編輯模式');
+  } else {
+    error.textContent = '密碼錯誤，請再試一次';
+    input.value='';
+    input.focus();
+  }
+}
+
+function updateLockUI(){
+  const btn = document.getElementById('lockBtn');
+  const status = document.getElementById('lockStatus');
+  if(editMode){
+    btn.textContent = '🔓 鎖定（結束編輯）';
+    btn.classList.add('unlocked');
+    status.textContent = '目前為編輯模式，您的修改會自動儲存';
+  } else {
+    btn.textContent = '🔒 解鎖編輯';
+    btn.classList.remove('unlocked');
+    status.textContent = '目前為檢視模式，所有人皆無法編輯';
+  }
+}
+
+function fieldRow(label, idx, field, value){
+  return `<div class="field">
+    <label>${label}</label>
+    <input type="date" value="${value||''}" ${editMode ? '' : 'disabled'} onchange="updateField(${idx},'${field}',this.value)">
+  </div>`;
+}
+
+function rangeRow(label, idx, fieldStart, fieldEnd, vStart, vEnd){
+  return `<div class="field range">
+    <label>${label}</label>
+    <input type="date" value="${vStart||''}" ${editMode ? '' : 'disabled'} onchange="updateField(${idx},'${fieldStart}',this.value)">
+    <span class="sep">–</span>
+    <input type="date" value="${vEnd||''}" ${editMode ? '' : 'disabled'} onchange="updateField(${idx},'${fieldEnd}',this.value)">
+  </div>`;
+}
+
+// 「所有資料繳交」「簡報繳交」專用：日期欄位 + 狀態燈號 + 「標記已繳交」按鈕
+function submitFieldRow(label, idx, field, doneField, value, done){
+  const st = submitStatus(value, done);
+  const btnLabel = done ? '↺ 取消標記' : '✅ 標記已繳交';
+  return `<div class="field">
+    <label>${label}</label>
+    <input type="date" value="${value||''}" ${editMode ? '' : 'disabled'} onchange="updateField(${idx},'${field}',this.value)">
+  </div>
+  <div class="status-row">
+    <button class="mini-btn ${done ? 'done' : ''}" ${editMode ? '' : 'disabled'} onclick="toggleSubmitDone(${idx},'${doneField}')">${btnLabel}</button>
+    <span class="badge ${badgeClass(st.level)}">${st.label}</span>
+  </div>`;
+}
+
+function toggleSubmitDone(idx, field){
+  if(!editMode) return;
+  items[idx][field] = !items[idx][field];
+  save();
+  renderAll();
+}
+
+function renderCard(it, idx){
+  const aStat = applyStatus(it.applyStart, it.applyEnd, it.applyDone);
+  const t3 = trackStatus(it.t3);
+  const t15 = trackStatus(it.t15);
+  const t27 = trackStatus(it.t27);
+  const isPendingDelete = (pendingDelete === idx);
+
+  const nameHtml = editMode
+    ? `<input type="text" class="name-input" value="${(it.name||'').replace(/"/g,'&quot;')}" onchange="updateField(${idx},'name',this.value)">`
+    : `${it.name}`;
+
+  const deleteBtnHtml = editMode
+    ? `<button class="del-btn ${isPendingDelete ? 'confirm' : ''}" onclick="deleteItem(${idx})">${isPendingDelete ? '確定刪除？' : '🗑'}</button>`
+    : '';
+
+  const applyBtnLabel = it.applyDone ? '↺ 取消標記' : '✅ 申請完成';
+
+  return `
+  <div class="card">
+    <div class="card-head">
+      <div class="name"><span class="idx">${idx+1}</span>${nameHtml}</div>
+      <div class="card-head-right">
+        ${it.note ? `<span class="flag">${it.note}</span>` : ''}
+        ${deleteBtnHtml}
+      </div>
+    </div>
+
+    ${fieldRow('成立時間', idx, 'established', it.established)}
+
+    <div class="section-title">申請認證時間</div>
+    ${rangeRow('申請期間', idx, 'applyStart', 'applyEnd', it.applyStart, it.applyEnd)}
+    <div class="status-row">
+      <button class="mini-btn ${it.applyDone ? 'done' : ''}" ${editMode ? '' : 'disabled'} onclick="toggleSubmitDone(${idx},'applyDone')">${applyBtnLabel}</button>
+      <span class="badge ${badgeClass(aStat.level)}">${aStat.label}</span>
+    </div>
+
+    ${submitFieldRow('所有資料繳交', idx, 'docSubmit', 'docSubmitDone', it.docSubmit, it.docSubmitDone)}
+    ${submitFieldRow('簡報繳交', idx, 'presentSubmit', 'presentSubmitDone', it.presentSubmit, it.presentSubmitDone)}
+    ${fieldRow('實地訪視', idx, 'visit', it.visit)}
+
+    <div class="section-title">標章效期</div>
+    ${rangeRow('效期', idx, 'certStart', 'certEnd', it.certStart, it.certEnd)}
+
+    <div class="section-title">改善追蹤</div>
+    ${fieldRow('3個月', idx, 't3', it.t3)}
+    <div class="status-row"><span></span><span class="badge ${badgeClass(t3.level)}">${t3.label}</span></div>
+    ${fieldRow('15個月', idx, 't15', it.t15)}
+    <div class="status-row"><span></span><span class="badge ${badgeClass(t15.level)}">${t15.label}</span></div>
+    ${fieldRow('27個月', idx, 't27', it.t27)}
+    <div class="status-row"><span></span><span class="badge ${badgeClass(t27.level)}">${t27.label}</span></div>
+
+    <div class="section-title">備註</div>
+    <textarea class="remark-box" placeholder="輸入備註…" ${editMode ? '' : 'disabled'} onchange="updateField(${idx},'remark',this.value)">${it.remark || ''}</textarea>
+  </div>`;
+}
+
+function renderAlerts(){
+  const overdueRows = [];  // maroon 已逾期
+  const urgentRows = [];   // red 緊急（前2週）
+  const reminderRows = []; // orange 提醒中（前1個月）
+
+  function classify(level, row){
+    if(level === 'maroon') overdueRows.push(row);
+    else if(level === 'red') urgentRows.push(row);
+    else if(level === 'orange') reminderRows.push(row);
+  }
+
+  items.forEach((it,idx)=>{
+    const aStat = applyStatus(it.applyStart, it.applyEnd, it.applyDone);
+    if(aStat.level === 'maroon'){
+      classify('maroon', {tag:'申請截止', text:`${it.name}：申請認證已逾期（原訂 ${fmtDisplay(it.applyEnd)} 截止，${aStat.label}），請確認送件狀態`});
+    } else if(aStat.level === 'red'){
+      classify('red', {tag:'申請截止', text:`${it.name}：申請認證即將截止（${fmtDisplay(it.applyEnd)}），${aStat.label}`});
+    } else if(aStat.level === 'orange'){
+      classify('orange', {tag:'申請中', text:`${it.name}：申請認證期間（${fmtDisplay(it.applyStart)} – ${fmtDisplay(it.applyEnd)}）即將截止，${aStat.label}`});
+    }
+    [['3個月',it.t3],['15個月',it.t15],['27個月',it.t27]].forEach(([label,val])=>{
+      if(!val) return;
+      const st = trackStatus(val);
+      if(st.level === 'maroon'){
+        classify('maroon', {tag:label+'追蹤', text:`${it.name}：${label}改善追蹤已逾期（原訂 ${fmtDisplay(val)}，${st.label}），請確認辦理狀態`});
+      } else if(st.level === 'red'){
+        classify('red', {tag:label+'追蹤', text:`${it.name}：${label}改善追蹤即將到期（${fmtDisplay(val)}），${st.label}`});
+      } else if(st.level === 'orange'){
+        classify('orange', {tag:label+'追蹤', text:`${it.name}：${label}改善追蹤將於 ${fmtDisplay(val)} 到期，${st.label}`});
+      }
+    });
+    [['所有資料繳交', it.docSubmit, it.docSubmitDone], ['簡報繳交', it.presentSubmit, it.presentSubmitDone]].forEach(([label, val, done])=>{
+      if(!val || done) return;
+      const st = submitStatus(val, done);
+      if(st.level === 'maroon'){
+        classify('maroon', {tag:label, text:`${it.name}：${label}已逾期（原訂 ${fmtDisplay(val)}，${st.label}）`});
+      } else if(st.level === 'red'){
+        classify('red', {tag:label, text:`${it.name}：${label}即將到期（${fmtDisplay(val)}），${st.label}`});
+      } else if(st.level === 'orange'){
+        classify('orange', {tag:label, text:`${it.name}：${label}將於 ${fmtDisplay(val)} 到期，${st.label}`});
+      }
+    });
+  });
+
+  const list = document.getElementById('alertList');
+  if(overdueRows.length === 0 && urgentRows.length === 0 && reminderRows.length === 0){
+    list.innerHTML = `<div class="alert-empty">目前沒有進行中、緊急或逾期的項目 👍</div>`;
+    return;
+  }
+
+  function renderGroup(label, cls, rows){
+    if(rows.length === 0) return '';
+    return `<div class="alert-group-label">${label}</div>` + rows.map(r=>`
+      <div class="alert-row ${cls}">
+        <span class="tag">${r.tag}</span>
+        <span>${r.text}</span>
+      </div>`).join('');
+  }
+
+  let html = '';
+  html += renderGroup('🟤 已逾期，請優先處理', 'overdue', overdueRows);
+  html += renderGroup('🟠 緊急（2週內）', 'urgent', urgentRows);
+  html += renderGroup('🔵 提醒中（1個月內）', 'reminder', reminderRows);
+  list.innerHTML = html;
+}
+
+function renderAll(){
+  document.getElementById('cardGrid').innerHTML = items.map((it,idx)=>renderCard(it,idx)).join('');
+  renderAlerts();
+  const sub = document.getElementById('subLabel');
+  if(sub){ sub.textContent = `${items.length} 項疾病別認證追蹤・申請認證期限與改善追蹤自動提醒`; }
+}
+
+async function init(){
+  try{
+    const valueStr = await backendGet();
+    if(valueStr){
+      items = JSON.parse(valueStr);
+    } else {
+      items = defaultItems;
+      await backendSet(JSON.stringify(items));
+    }
+  }catch(e){
+    items = defaultItems;
+    showToast('無法連線到資料庫，暫時顯示預設資料');
+  }
+  // 相容舊資料：如果資料裡還沒有「所有資料繳交」「簡報繳交」欄位，
+  // 就依現有的實地訪視日期自動補上預設值（之後仍可手動調整）
+  let backfilled = false;
+  items.forEach(it=>{
+    if(it.docSubmit === undefined){
+      it.docSubmit = it.visit ? subtractOneMonth(it.visit) : '';
+      backfilled = true;
+    }
+    if(it.presentSubmit === undefined){
+      it.presentSubmit = it.visit ? mondayOfPrevWeek(it.visit) : '';
+      backfilled = true;
+    }
+    if(it.docSubmitDone === undefined){
+      it.docSubmitDone = false;
+      backfilled = true;
+    }
+    if(it.presentSubmitDone === undefined){
+      it.presentSubmitDone = false;
+      backfilled = true;
+    }
+    if(it.applyDone === undefined){
+      it.applyDone = false;
+      backfilled = true;
+    }
+    if(it.remark === undefined){
+      it.remark = '';
+      backfilled = true;
+    }
+  });
+  if(backfilled){
+    try{ await backendSet(JSON.stringify(items)); }catch(e){}
+  }
+  renderAll();
+  updateLockUI();
+}
+
+init();
+</script>
+</body>
+</html>
