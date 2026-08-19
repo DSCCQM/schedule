@@ -570,7 +570,17 @@ async function backendGet(){
   if(data.error){ throw new Error(data.error); }
   return data.value || '';
 }
-
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(registration => {
+        console.log('PWA: Service Worker 註冊成功！範圍是：', registration.scope);
+      })
+      .catch(error => {
+        console.log('PWA: Service Worker 註冊失敗：', error);
+      });
+  });
+}
 async function backendSet(valueStr){
   const url = `${APPS_SCRIPT_URL}?token=${encodeURIComponent(API_TOKEN)}&action=set&value=${encodeURIComponent(valueStr)}`;
   const res = await fetch(url);
